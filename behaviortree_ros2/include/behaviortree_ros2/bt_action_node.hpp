@@ -559,7 +559,19 @@ inline void RosActionNode<T>::cancelGoal()
   auto& action_client = client_instance_->action_client;
 
   auto future_result = action_client->async_get_result(goal_handle_);
-  auto future_cancel = action_client->async_cancel_goal(goal_handle_);
+
+  decltype(action_client->async_cancel_goal(goal_handle_)) future_cancel;
+  try
+  {
+    future_cancel = action_client->async_cancel_goal(goal_handle_);
+  }
+  catch(const rclcpp_action::exceptions::UnknownGoalHandleError& ex)
+  {
+    RCLCPP_WARN(logger(),
+                "Ignoring cancel request for expired goal handle on [%s]: %s",
+                action_name_.c_str(), ex.what());
+    return;
+  }
 
   constexpr auto SUCCESS = rclcpp::FutureReturnCode::SUCCESS;
 
